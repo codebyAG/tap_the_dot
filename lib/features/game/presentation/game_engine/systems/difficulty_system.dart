@@ -3,8 +3,14 @@ import '../../../../../core/constants/game_constants.dart';
 /// Maps elapsed run time to the current target size / spawn pace. Pure
 /// Dart so it's trivial to tune and reason about independently of Flame.
 class DifficultySystem {
+  /// Pinned at 0 (easiest) for the first [GameConstants.easyStartSeconds]
+  /// so a fresh player gets a few guaranteed easy, satisfying hits before
+  /// the ramp begins — then ramps smoothly to 1 over the remaining time.
   double _progress(double elapsedSeconds) {
-    return (elapsedSeconds / GameConstants.difficultyRampDurationSeconds).clamp(0.0, 1.0);
+    if (elapsedSeconds <= GameConstants.easyStartSeconds) return 0.0;
+    final rampSpan = GameConstants.difficultyRampDurationSeconds - GameConstants.easyStartSeconds;
+    final t = (elapsedSeconds - GameConstants.easyStartSeconds) / rampSpan;
+    return t.clamp(0.0, 1.0);
   }
 
   double targetRadiusFor(double elapsedSeconds) {

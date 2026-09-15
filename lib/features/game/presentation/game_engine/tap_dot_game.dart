@@ -1,18 +1,30 @@
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 
 import '../../../../core/constants/asset_constants.dart';
 import '../../../../core/constants/game_constants.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../domain/entities/combo.dart';
 import '../../domain/entities/target.dart';
 import '../controllers/game_controller.dart';
 import 'components/target_component.dart';
+import 'effects/combo_milestone_effect.dart';
+import 'effects/fever_effect.dart';
+import 'effects/target_hit_effect.dart';
+import 'effects/wrong_tap_effect.dart';
 import 'systems/difficulty_system.dart';
 import 'systems/spawn_system.dart';
 
 /// Owns the real-time gameplay world: spawning targets, their positions,
-/// animations and particles. Business state (score/timer/combo) lives in
-/// [GameController] — this class only reads it and reports hits back.
-class TapDotGame extends FlameGame {
+/// animations and particles. Business state (score/timer/combo/Fever)
+/// lives in [GameController] — this class only reads it and reports what
+/// happened back through registerHit/registerWrongTap/registerTimeout.
+///
+/// Also catches taps that don't land on any target — TapCallbacks here
+/// fires only when no child component consumed the event first, which is
+/// exactly what "wrong tap" means.
+class TapDotGame extends FlameGame with TapCallbacks {
   TapDotGame({required this.controller});
 
   final GameController controller;
@@ -23,9 +35,11 @@ class TapDotGame extends FlameGame {
   TargetComponent? _activeTarget;
   double _elapsedPlayTime = 0;
   double _spawnCooldown = 0;
+  bool _isFirstSpawnOfRun = true;
 
   Sprite? _dotSprite;
   SpriteComponent? _background;
+  FeverOverlay? _feverOverlay;
 
   @override
   Future<void> onLoad() async {
@@ -38,6 +52,7 @@ class TapDotGame extends FlameGame {
       sprite: Sprite(images.fromCache(AssetConstants.background)),
       size: size,
       position: Vector2.zero(),
+      priority: -10,
     );
     await add(_background!);
 
@@ -48,6 +63,7 @@ class TapDotGame extends FlameGame {
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     _background?.size = size;
+    _feverOverlay?.size = size;
   }
 
   @override
@@ -56,11 +72,23 @@ class TapDotGame extends FlameGame {
     super.onRemove();
   }
 
-  bool _wasPlaying = false;
+  /// A tap that reached the game itself means no target consumed it —
+  /// i.e. the player tapped outside the active dot.
+  @override
+  void onTapDown(TapDownEvent event) {
+    if (!controller.isPlaying) return;
+    controller.registerWrongTap();
+    add(WrongTapEffect(position: event.localPosition.clone()));
+  }
 
-  /// Edge-triggered on isPlaying so start/stop only fire once each,
-  /// regardless of how many other notifyListeners() calls happen while
-  /// playing (score/combo/timer all go through the same listener).
+  bool _wasPlaying = false;
+  int _lastComboMultiplier = 1;
+  bool _wasFeverActive = false;
+
+  /// Edge-triggered on isPlaying so start/stop only fire once each, plus
+  /// combo-milestone/Fever visual transitions — all driven off controller
+  /// state changes, regardless of how many other notifyListeners() calls
+  /// happen while playing (score/timer tick through the same listener).
   void _onControllerChanged() {
     final isPlaying = controller.isPlaying;
     if (isPlaying && !_wasPlaying) {
@@ -69,19 +97,57 @@ class TapDotGame extends FlameGame {
       _stopRun();
     }
     _wasPlaying = isPlaying;
+
+    if (isPlaying) {
+      final tier = ComboRules.multiplierFor(controller.combo);
+      if (tier > _lastComboMultiplier) {
+        _showComboMilestone(tier);
+      }
+      _lastComboMultiplier = tier;
+
+      if (controller.isFeverActive && !_wasFeverActive) {
+        _showFeverStart();
+      } else if (!controller.isFeverActive && _wasFeverActive) {
+        _hideFeverOverlay();
+      }
+      _wasFeverActive = controller.isFeverActive;
+    }
   }
 
   void _startRun() {
     _elapsedPlayTime = 0;
     _spawnCooldown = 0;
+    _isFirstSpawnOfRun = true;
+    _lastComboMultiplier = 1;
+    _wasFeverActive = false;
     _activeTarget?.removeFromParent();
     _activeTarget = null;
+    _spawnSystem.reset();
+    _hideFeverOverlay();
     _spawnTarget();
   }
 
   void _stopRun() {
     _activeTarget?.removeFromParent();
     _activeTarget = null;
+    _hideFeverOverlay();
+  }
+
+  void _showComboMilestone(int tier) {
+    final center = Vector2(size.x / 2, size.y * 0.32);
+    add(ComboMilestoneEffect(position: center, multiplier: tier));
+    add(TargetHitEffect.burst(position: center, color: AppColors.gold, strong: true));
+  }
+
+  void _showFeverStart() {
+    _feverOverlay = FeverOverlay(size: size);
+    add(_feverOverlay!);
+    add(FeverBannerEffect(position: Vector2(size.x / 2, size.y * 0.3)));
+  }
+
+  void _hideFeverOverlay() {
+    _feverOverlay?.removeFromParent();
+    _feverOverlay = null;
   }
 
   @override
@@ -101,8 +167,13 @@ class TapDotGame extends FlameGame {
 
   void _spawnTarget() {
     final radius = _difficultySystem.targetRadiusFor(_elapsedPlayTime);
-    final position = _spawnSystem.randomPosition(canvasSize: size, targetRadius: radius);
     final lifetime = _difficultySystem.spawnIntervalFor(_elapsedPlayTime) * 2.4;
+    final isGolden = !_isFirstSpawnOfRun && _spawnSystem.shouldSpawnGolden();
+
+    final position = _isFirstSpawnOfRun
+        ? _spawnSystem.centeredPosition(canvasSize: size, targetRadius: radius)
+        : _spawnSystem.randomPosition(canvasSize: size, targetRadius: radius);
+    _isFirstSpawnOfRun = false;
 
     final target = TargetComponent(
       position: position,
@@ -111,21 +182,25 @@ class TapDotGame extends FlameGame {
       onHit: _handleHit,
       onExpired: _handleExpired,
       sprite: _dotSprite,
+      isGolden: isGolden,
+      feverBoost: controller.isFeverActive,
     );
 
     _activeTarget = target;
     add(target);
   }
 
-  void _handleHit(TargetComponent target, HitZone zone) {
-    if (!controller.isPlaying) return;
-    controller.registerHit(zone);
+  int _handleHit(TargetComponent target, HitZone zone, bool isGolden) {
+    if (!controller.isPlaying) return 0;
+    final earned = controller.registerHit(zone, isGolden: isGolden);
     _activeTarget = null;
     _spawnCooldown = GameConstants.postHitSpawnDelay;
+    return earned;
   }
 
   void _handleExpired(TargetComponent target) {
     if (!controller.isPlaying) return;
+    controller.registerTimeout();
     _activeTarget = null;
     _spawnCooldown = GameConstants.postExpireSpawnDelay;
   }

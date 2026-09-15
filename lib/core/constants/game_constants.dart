@@ -33,7 +33,34 @@ class GameConstants {
   /// How long difficulty takes to ramp from start to max, in seconds.
   static const double difficultyRampDurationSeconds = 25;
 
+  /// First few seconds stay pinned to the easiest difficulty (large, slow,
+  /// long-lived targets) so a fresh player gets quick, easy wins before the
+  /// ramp kicks in — see DifficultySystem.
+  static const double easyStartSeconds = 4.0;
+
   /// Fraction of the playable height/width kept clear as a safe margin
   /// around HUD elements when picking a spawn position.
   static const double safeAreaMarginFraction = 0.12;
+
+  /// Minimum distance (as a fraction of the shorter canvas side) between
+  /// consecutive spawn positions, so targets don't repeat near the same
+  /// spot — see SpawnSystem.
+  static const double minSpawnSeparationFraction = 0.3;
+
+  // --- Combo multiplier tiers (consecutive successful hits -> multiplier) ---
+  static const int comboTier2 = 5;
+  static const int comboTier3 = 10;
+  static const int comboTier4 = 20;
+  static const int comboTier5 = 30;
+
+  // --- Golden Dot ---
+  /// Kept rare on purpose — should feel like a lucky moment, not routine.
+  static const double goldenDotSpawnChance = 0.05;
+  static const int goldenDotBonusScore = 10;
+  static const int goldenDotBonusCoins = 5;
+
+  // --- Fever Mode ---
+  static const int feverTriggerCombo = 10;
+  static const double feverDurationSeconds = 5.0;
+  static const int feverScoreMultiplier = 2;
 }

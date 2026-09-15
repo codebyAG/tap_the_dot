@@ -9,12 +9,14 @@ import '../../../domain/entities/target.dart';
 import '../effects/floating_score_text.dart';
 import '../effects/target_hit_effect.dart';
 
-typedef TargetHitCallback = void Function(TargetComponent target, HitZone zone);
+/// Returns the actual score awarded (combo/Fever/Golden-boosted) so the
+/// floating feedback text can show the real number.
+typedef TargetHitCallback = int Function(TargetComponent target, HitZone zone, bool isGolden);
 typedef TargetExpiredCallback = void Function(TargetComponent target);
 
 /// The real, tappable dot. Rendering + tap-resolution only — scoring
-/// rules live in [TargetScoring] and app state lives in GameController;
-/// this component just reports what happened via its callbacks.
+/// rules live in [TargetScoring]/GameController; this component just
+/// reports what happened via its callbacks.
 class TargetComponent extends PositionComponent with TapCallbacks {
   TargetComponent({
     required Vector2 position,
@@ -23,6 +25,8 @@ class TargetComponent extends PositionComponent with TapCallbacks {
     required this.onHit,
     required this.onExpired,
     this.sprite,
+    this.isGolden = false,
+    this.feverBoost = false,
   }) : super(
          position: position,
          anchor: Anchor.center,
@@ -37,6 +41,13 @@ class TargetComponent extends PositionComponent with TapCallbacks {
   /// The dot's cosmetic skin image. Falls back to a procedural circle if
   /// not provided (e.g. asset failed to load).
   final Sprite? sprite;
+
+  /// Rare bonus target — clearly different visual, bigger reward.
+  final bool isGolden;
+
+  /// Snapshot of Fever Mode at spawn time, used to boost hit-particle
+  /// intensity for targets spawned while Fever is active.
+  final bool feverBoost;
 
   bool _resolved = false;
 
@@ -59,9 +70,25 @@ class TargetComponent extends PositionComponent with TapCallbacks {
     );
   }
 
+  /// Circular hit-test matching the visual dot, instead of the default
+  /// square bounding box — a tap just outside the circle (but inside the
+  /// component's square) must count as a wrong tap on the background, not
+  /// a hit on this target.
+  @override
+  bool containsLocalPoint(Vector2 point) {
+    return (point - size / 2).length <= radius;
+  }
+
   @override
   void render(Canvas canvas) {
     final center = Offset(size.x / 2, size.y / 2);
+
+    if (isGolden) {
+      final glowPaint = Paint()
+        ..color = AppColors.gold.withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+      canvas.drawCircle(center, radius * 1.3, glowPaint);
+    }
 
     final skin = sprite;
     if (skin != null) {
@@ -81,6 +108,14 @@ class TargetComponent extends PositionComponent with TapCallbacks {
         radius * 0.26,
         glossPaint,
       );
+    }
+
+    if (isGolden) {
+      final goldRingPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..color = AppColors.gold;
+      canvas.drawCircle(center, radius * 0.98, goldRingPaint);
     }
 
     final perfectRingPaint = Paint()
@@ -104,26 +139,45 @@ class TargetComponent extends PositionComponent with TapCallbacks {
       goodFraction: GameConstants.goodHitZoneFraction,
     );
 
-    _playHitFeedback(zone);
-    onHit(this, zone);
+    final earnedScore = onHit(this, zone, isGolden);
+    _playHitFeedback(zone, earnedScore);
   }
 
-  void _playHitFeedback(HitZone zone) {
-    final strong = zone == HitZone.perfect;
+  void _playHitFeedback(HitZone zone, int earnedScore) {
+    final isPerfect = zone == HitZone.perfect;
+    final strong = isPerfect || isGolden || feverBoost;
+
     parent?.add(
       TargetHitEffect.burst(
         position: position.clone(),
-        color: strong ? AppColors.gold : AppColors.targetHighlight,
+        color: isGolden ? AppColors.gold : (isPerfect ? AppColors.gold : AppColors.targetHighlight),
         strong: strong,
       ),
     );
-    parent?.add(FloatingScoreText(position: position.clone() - Vector2(0, radius), zone: zone));
+    // Perfect/Golden get a second, wider sparkle layer for extra juice.
+    if (isPerfect || isGolden) {
+      parent?.add(
+        TargetHitEffect.burst(
+          position: position.clone(),
+          color: AppColors.gold,
+          strong: true,
+        ),
+      );
+    }
+    parent?.add(
+      FloatingScoreText(
+        position: position.clone() - Vector2(0, radius),
+        score: earnedScore,
+        zone: zone,
+        isGolden: isGolden,
+      ),
+    );
 
     // Plain PositionComponent doesn't implement HasPaint/OpacityProvider,
     // so OpacityEffect would throw at runtime — pop via scale instead.
     add(
       SequenceEffect([
-        ScaleEffect.to(Vector2.all(1.3), EffectController(duration: 0.08)),
+        ScaleEffect.to(Vector2.all(isPerfect || isGolden ? 1.45 : 1.3), EffectController(duration: 0.08)),
         ScaleEffect.to(Vector2.zero(), EffectController(duration: 0.12, curve: Curves.easeIn)),
       ], onComplete: removeFromParent),
     );

@@ -6,10 +6,16 @@ class GameResult {
     required this.coinsEarned,
     required this.isNewBest,
     required this.bestScore,
+    required this.totalHits,
+    required this.perfectHits,
+    required this.bestCombo,
   });
 
   final int score;
   final int coinsEarned;
   final bool isNewBest;
   final int bestScore;
+  final int totalHits;
+  final int perfectHits;
+  final int bestCombo;
 }

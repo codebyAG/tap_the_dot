@@ -12,12 +12,14 @@ enum SoundEffect {
   gameOver,
   newBest,
   button,
+  miss,
 }
 
 // Only tap/coin/bomb/success have been imported so far. Perfect, combo and
 // new-best all borrow the "success" sting until dedicated effects arrive;
-// game-over and button are left unmapped (play() silently no-ops for them)
-// rather than reusing a sound that would feel wrong.
+// game-over, button and miss are left unmapped (play() silently no-ops for
+// them) rather than reusing a sound that would feel wrong — the wrong-tap
+// spec explicitly wants a soft, non-harsh miss sound we don't have yet.
 const Map<SoundEffect, String> _soundFiles = {
   SoundEffect.tap: AssetConstants.sfxTap,
   SoundEffect.perfect: AssetConstants.sfxSuccess,

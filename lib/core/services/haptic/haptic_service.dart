@@ -16,9 +16,26 @@ class HapticService {
     HapticFeedback.mediumImpact();
   }
 
+  /// Wrong tap (missed the target entirely) — deliberately the lightest
+  /// feedback in the game so it reads as "be more accurate", not "penalty".
   void mistake() {
     if (!enabled) return;
     HapticFeedback.selectionClick();
+  }
+
+  void goldenHit() {
+    if (!enabled) return;
+    HapticFeedback.mediumImpact();
+  }
+
+  void comboMilestone() {
+    if (!enabled) return;
+    HapticFeedback.mediumImpact();
+  }
+
+  void feverStart() {
+    if (!enabled) return;
+    HapticFeedback.heavyImpact();
   }
 
   void bomb() {
