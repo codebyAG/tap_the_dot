@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/theme/app_text_styles.dart';
 import '../controllers/game_controller.dart';
+import 'hud_chip.dart';
 
 class ScoreWidget extends StatelessWidget {
   const ScoreWidget({super.key});
@@ -10,12 +10,6 @@ class ScoreWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final score = context.select<GameController, int>((c) => c.score);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('SCORE', style: AppTextStyles.hudLabel),
-        Text('$score', style: AppTextStyles.score),
-      ],
-    );
+    return HudChip(label: 'SCORE', value: '$score');
   }
 }

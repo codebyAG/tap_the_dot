@@ -8,7 +8,7 @@ import '../../../../core/services/haptic/haptic_service.dart';
 import '../../domain/entities/combo.dart';
 import '../../domain/entities/game_result.dart';
 import '../../domain/entities/target.dart';
-import '../../domain/usecases/get_best_score.dart';
+import '../../domain/usecases/get_player_progress.dart';
 import '../../domain/usecases/save_score.dart';
 
 /// App-level gameplay state and rules. Owns the 30-second countdown,
@@ -17,18 +17,18 @@ import '../../domain/usecases/save_score.dart';
 /// [registerTimeout].
 class GameController extends ChangeNotifier {
   GameController({
-    required GetBestScore getBestScore,
+    required GetPlayerProgress getPlayerProgress,
     required SaveScore saveScore,
     required AudioService audioService,
     required HapticService hapticService,
-  }) : _getBestScore = getBestScore,
+  }) : _getPlayerProgress = getPlayerProgress,
        _saveScore = saveScore,
        _audioService = audioService,
        _hapticService = hapticService {
-    _loadBestScore();
+    _loadProgress();
   }
 
-  final GetBestScore _getBestScore;
+  final GetPlayerProgress _getPlayerProgress;
   final SaveScore _saveScore;
   final AudioService _audioService;
   final HapticService _hapticService;
@@ -44,6 +44,7 @@ class GameController extends ChangeNotifier {
   double feverTimeRemaining = 0;
 
   int bestScore = 0;
+  int totalCoins = 0;
   double timeRemaining = GameConstants.gameDurationSeconds.toDouble();
   bool isPlaying = false;
   bool isGameOver = false;
@@ -52,8 +53,10 @@ class GameController extends ChangeNotifier {
   Timer? _countdownTimer;
   int _lastComboMultiplier = 1;
 
-  Future<void> _loadBestScore() async {
-    bestScore = await _getBestScore();
+  Future<void> _loadProgress() async {
+    final progress = await _getPlayerProgress();
+    bestScore = progress.bestScore;
+    totalCoins = progress.coins;
     notifyListeners();
   }
 
@@ -202,6 +205,7 @@ class GameController extends ChangeNotifier {
       bestCombo: bestCombo,
     );
     bestScore = lastResult!.bestScore;
+    totalCoins += coinsEarned;
 
     _audioService.play(SoundEffect.gameOver);
     if (lastResult!.isNewBest) {

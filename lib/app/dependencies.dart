@@ -7,7 +7,7 @@ import '../core/services/storage/storage_service.dart';
 import '../features/game/data/datasources/game_local_datasource.dart';
 import '../features/game/data/repositories/game_repository_impl.dart';
 import '../features/game/domain/repositories/game_repository.dart';
-import '../features/game/domain/usecases/get_best_score.dart';
+import '../features/game/domain/usecases/get_player_progress.dart';
 import '../features/game/domain/usecases/save_score.dart';
 import '../features/game/presentation/controllers/game_controller.dart';
 
@@ -22,7 +22,7 @@ List<SingleChildWidget> buildAppProviders() {
   final localDataSource = GameLocalDataSource(storageService);
   final GameRepository gameRepository = GameRepositoryImpl(localDataSource);
 
-  final getBestScore = GetBestScore(gameRepository);
+  final getPlayerProgress = GetPlayerProgress(gameRepository);
   final saveScore = SaveScore(gameRepository);
 
   return [
@@ -30,7 +30,7 @@ List<SingleChildWidget> buildAppProviders() {
     Provider<HapticService>.value(value: hapticService),
     ChangeNotifierProvider<GameController>(
       create: (_) => GameController(
-        getBestScore: getBestScore,
+        getPlayerProgress: getPlayerProgress,
         saveScore: saveScore,
         audioService: audioService,
         hapticService: hapticService,
