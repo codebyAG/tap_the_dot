@@ -2,7 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../../core/theme/app_colors.dart';
+import 'package:tap_the_dot/theme/app_colors.dart';
 
 /// Small, unobtrusive feedback for a tap that missed the active target —
 /// a soft ripple + tiny "MISS" label. Deliberately brief and quiet so a
@@ -31,9 +31,15 @@ class WrongTapEffect extends PositionComponent {
     );
     add(
       SequenceEffect([
-        ScaleEffect.to(Vector2.all(1.0), EffectController(duration: 0.12, curve: Curves.easeOut)),
+        ScaleEffect.to(
+          Vector2.all(1.0),
+          EffectController(duration: 0.12, curve: Curves.easeOut),
+        ),
         ScaleEffect.to(Vector2.all(1.0), EffectController(duration: 0.1)),
-        ScaleEffect.to(Vector2.zero(), EffectController(duration: 0.18, curve: Curves.easeIn)),
+        ScaleEffect.to(
+          Vector2.zero(),
+          EffectController(duration: 0.18, curve: Curves.easeIn),
+        ),
       ], onComplete: removeFromParent),
     );
   }

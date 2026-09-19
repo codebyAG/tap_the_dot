@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/constants/app_constants.dart';
-import '../core/theme/app_theme.dart';
-import 'dependencies.dart';
-import 'routes.dart';
+import 'package:tap_the_dot/constants/app_constants.dart';
+import 'package:tap_the_dot/theme/app_theme.dart';
+import 'package:tap_the_dot/dependencies.dart';
+import 'package:tap_the_dot/routes.dart';
 
 class TapTheDotApp extends StatelessWidget {
   const TapTheDotApp({super.key});
@@ -17,7 +17,7 @@ class TapTheDotApp extends StatelessWidget {
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        initialRoute: AppRoutes.home,
+        initialRoute: AppRoutes.splash,
         routes: AppRoutes.routes,
       ),
     );

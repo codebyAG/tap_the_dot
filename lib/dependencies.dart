@@ -1,15 +1,16 @@
-import 'package:provider/provider.dart';
+﻿import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
-import '../core/services/audio/audio_service.dart';
-import '../core/services/haptic/haptic_service.dart';
-import '../core/services/storage/storage_service.dart';
-import '../features/game/data/datasources/game_local_datasource.dart';
-import '../features/game/data/repositories/game_repository_impl.dart';
-import '../features/game/domain/repositories/game_repository.dart';
-import '../features/game/domain/usecases/get_player_progress.dart';
-import '../features/game/domain/usecases/save_score.dart';
-import '../features/game/presentation/controllers/game_controller.dart';
+import 'package:tap_the_dot/services/audio_service.dart';
+import 'package:tap_the_dot/services/haptic_service.dart';
+import 'package:tap_the_dot/services/storage_service.dart';
+import 'package:tap_the_dot/services/game_local_datasource.dart';
+import 'package:tap_the_dot/services/game_repository_impl.dart';
+import 'package:tap_the_dot/services/game_repository.dart';
+import 'package:tap_the_dot/services/get_player_progress.dart';
+import 'package:tap_the_dot/services/save_player_progress.dart';
+import 'package:tap_the_dot/services/save_score.dart';
+import 'package:tap_the_dot/services/game_controller.dart';
 
 /// Manual composition root. Small app, so a simple factory of
 /// [ChangeNotifierProvider]/[Provider] entries is enough — no DI codegen
@@ -24,6 +25,7 @@ List<SingleChildWidget> buildAppProviders() {
 
   final getPlayerProgress = GetPlayerProgress(gameRepository);
   final saveScore = SaveScore(gameRepository);
+  final savePlayerProgress = SavePlayerProgress(gameRepository);
 
   return [
     Provider<AudioService>.value(value: audioService),
@@ -32,6 +34,7 @@ List<SingleChildWidget> buildAppProviders() {
       create: (_) => GameController(
         getPlayerProgress: getPlayerProgress,
         saveScore: saveScore,
+        savePlayerProgress: savePlayerProgress,
         audioService: audioService,
         hapticService: hapticService,
       ),

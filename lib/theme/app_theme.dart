@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import 'package:tap_the_dot/theme/app_colors.dart';
 
 class AppTheme {
   AppTheme._();
@@ -25,6 +25,20 @@ class AppTheme {
           ),
           elevation: 4,
         ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.textDark,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: AppColors.background,
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
     );
   }

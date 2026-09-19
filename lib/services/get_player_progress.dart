@@ -1,5 +1,5 @@
-import '../entities/player_progress.dart';
-import '../repositories/game_repository.dart';
+﻿import 'package:tap_the_dot/models/player_progress.dart';
+import 'package:tap_the_dot/services/game_repository.dart';
 
 /// Fetches full persisted progress (best score + coin total) — used by
 /// GameController to populate the Home screen without a separate

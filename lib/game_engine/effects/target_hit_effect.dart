@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flame/particles.dart';
 import 'package:flutter/material.dart';
 
@@ -39,5 +40,44 @@ class TargetHitEffect {
         },
       ),
     );
+  }
+}
+
+/// Ring that pops out from the hit point and expands away, reserved for
+/// Perfect/Golden hits so they read as noticeably bigger moments than a
+/// normal hit's particle burst alone.
+class ExpandingRingEffect extends PositionComponent {
+  ExpandingRingEffect({
+    required Vector2 position,
+    required this.color,
+    required this.startRadius,
+  }) : super(
+         position: position,
+         anchor: Anchor.center,
+         size: Vector2.all(startRadius * 2),
+       );
+
+  final Color color;
+  final double startRadius;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(
+      ScaleEffect.to(
+        Vector2.all(2.2),
+        EffectController(duration: 0.4, curve: Curves.easeOut),
+        onComplete: removeFromParent,
+      ),
+    );
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = color.withValues(alpha: 0.55);
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), startRadius, paint);
   }
 }

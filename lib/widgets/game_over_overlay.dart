@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../domain/entities/game_result.dart';
-import '../controllers/game_controller.dart';
+import 'package:tap_the_dot/constants/asset_constants.dart';
+import 'package:tap_the_dot/models/game_result.dart';
+import 'package:tap_the_dot/services/game_controller.dart';
+import 'package:tap_the_dot/theme/app_colors.dart';
+import 'package:tap_the_dot/theme/app_text_styles.dart';
+import 'package:tap_the_dot/widgets/game_button.dart';
 
+/// Result card shown over the Flame canvas when a run ends, built on
+/// `panels/panel_game_over.png` (trophy ribbon header, one big blank body,
+/// one CTA-shaped button) — real content is overlaid in that generous
+/// blank body rather than fighting the baked header/button art.
 class GameOverOverlay extends StatelessWidget {
-  const GameOverOverlay({super.key, required this.onPlayAgain, required this.onHome});
+  const GameOverOverlay({
+    super.key,
+    required this.onPlayAgain,
+    required this.onHome,
+  });
 
   final VoidCallback onPlayAgain;
   final VoidCallback onHome;
@@ -26,44 +36,85 @@ class GameOverOverlay extends StatelessWidget {
         tween: Tween(begin: 0.85, end: 1.0),
         duration: const Duration(milliseconds: 280),
         curve: Curves.easeOutBack,
-        builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 36),
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8))],
-          ),
+        builder: (context, scale, child) =>
+            Transform.scale(scale: scale, child: child),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 36),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (result.isNewBest) ...[
-                const Text(
-                  '🏆 NEW BEST! 🏆',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.gold),
-                ),
-                const SizedBox(height: 8),
-              ] else
-                const Text('GAME OVER', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-              const SizedBox(height: 12),
-              Text('${result.score}', style: AppTextStyles.heroTitle),
-              const SizedBox(height: 4),
-              Text('BEST: ${result.bestScore}', style: AppTextStyles.hudLabel),
-              const SizedBox(height: 20),
-              _StatsPanel(result: result),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: onPlayAgain,
-                  child: const Text('PLAY AGAIN', style: AppTextStyles.button),
-                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return AspectRatio(
+                    aspectRatio: 1086 / 1448,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          AssetConstants.asset(AssetConstants.panelGameOver),
+                          fit: BoxFit.fill,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(28, 0, 28, 0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Spacer(flex: 4),
+                              Text(
+                                result.isNewBest ? 'NEW BEST!' : 'GAME OVER',
+                                style: AppTextStyles.hudLabel.copyWith(
+                                  fontSize: 16,
+                                  color: result.isNewBest
+                                      ? AppColors.gold
+                                      : AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${result.score}',
+                                style: AppTextStyles.heroTitle.copyWith(
+                                  fontSize: 40,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'BEST: ${result.bestScore}',
+                                style: AppTextStyles.hudLabel,
+                              ),
+                              const SizedBox(height: 10),
+                              _StarRating(result: result),
+                              const Spacer(flex: 2),
+                              _StatsRow(result: result),
+                              const Spacer(flex: 5),
+                            ],
+                          ),
+                        ),
+                        Align(
+                          alignment: const Alignment(0, 0.83),
+                          child: SizedBox(
+                            width: constraints.maxWidth * 0.62,
+                            child: GameButton(
+                              label: 'RETRY',
+                              asset: AssetConstants.buttonRestart,
+                              onPressed: onPlayAgain,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               TextButton(
                 onPressed: onHome,
-                child: const Text('HOME', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'HOME',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
@@ -73,50 +124,94 @@ class GameOverOverlay extends StatelessWidget {
   }
 }
 
-class _StatsPanel extends StatelessWidget {
-  const _StatsPanel({required this.result});
+class _StarRating extends StatelessWidget {
+  const _StarRating({required this.result});
+
+  final GameResult result;
+
+  /// Derived purely from real GameResult fields — no fabricated rating
+  /// system. Star 1: landed any hits. Star 2: at least 3 perfect hits.
+  /// Star 3: beat the previous best.
+  @override
+  Widget build(BuildContext context) {
+    final stars = [
+      result.totalHits > 0,
+      result.perfectHits >= 3,
+      result.isNewBest,
+    ];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final filled in stars)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: Opacity(
+              opacity: filled ? 1.0 : 0.25,
+              child: Image.asset(
+                AssetConstants.asset(AssetConstants.iconStar),
+                width: 22,
+                height: 22,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.result});
 
   final GameResult result;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundAlt,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          _StatRow(emoji: '🎯', label: 'Hits', value: '${result.totalHits}'),
-          _StatRow(emoji: '💯', label: 'Perfect', value: '${result.perfectHits}'),
-          _StatRow(emoji: '🔥', label: 'Best Combo', value: 'x${result.bestCombo}'),
-          _StatRow(emoji: '🪙', label: 'Coins', value: '+${result.coinsEarned}'),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _Stat(
+          asset: AssetConstants.iconStopwatch,
+          value: '${result.totalHits}',
+          label: 'Hits',
+        ),
+        _Stat(
+          asset: AssetConstants.iconComboFire,
+          value: 'x${result.bestCombo}',
+          label: 'Combo',
+        ),
+        _Stat(
+          asset: AssetConstants.iconCoin,
+          value: '+${result.coinsEarned}',
+          label: 'Coins',
+        ),
+      ],
     );
   }
 }
 
-class _StatRow extends StatelessWidget {
-  const _StatRow({required this.emoji, required this.label, required this.value});
+class _Stat extends StatelessWidget {
+  const _Stat({required this.asset, required this.value, required this.label});
 
-  final String emoji;
-  final String label;
+  final String asset;
   final String value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(label, style: AppTextStyles.body)),
-          Text(value, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w900)),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Image.asset(AssetConstants.asset(asset), width: 22, height: 22),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.w900,
+            fontSize: 13,
+          ),
+        ),
+        Text(label, style: AppTextStyles.hudLabel.copyWith(fontSize: 9)),
+      ],
     );
   }
 }

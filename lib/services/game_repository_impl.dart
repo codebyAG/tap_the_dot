@@ -1,7 +1,7 @@
-import '../../domain/entities/player_progress.dart';
-import '../../domain/repositories/game_repository.dart';
-import '../datasources/game_local_datasource.dart';
-import '../models/player_progress_model.dart';
+import 'package:tap_the_dot/models/player_progress.dart';
+import 'package:tap_the_dot/services/game_repository.dart';
+import 'package:tap_the_dot/services/game_local_datasource.dart';
+import 'package:tap_the_dot/models/player_progress_model.dart';
 
 class GameRepositoryImpl implements GameRepository {
   GameRepositoryImpl(this._localDataSource);
@@ -9,7 +9,8 @@ class GameRepositoryImpl implements GameRepository {
   final GameLocalDataSource _localDataSource;
 
   @override
-  Future<PlayerProgress> getPlayerProgress() => _localDataSource.getPlayerProgress();
+  Future<PlayerProgress> getPlayerProgress() =>
+      _localDataSource.getPlayerProgress();
 
   @override
   Future<void> savePlayerProgress(PlayerProgress progress) {

@@ -3,15 +3,16 @@ import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../../core/constants/game_constants.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../domain/entities/target.dart';
-import '../effects/floating_score_text.dart';
-import '../effects/target_hit_effect.dart';
+import 'package:tap_the_dot/constants/game_constants.dart';
+import 'package:tap_the_dot/theme/app_colors.dart';
+import 'package:tap_the_dot/models/target.dart';
+import 'package:tap_the_dot/game_engine/effects/floating_score_text.dart';
+import 'package:tap_the_dot/game_engine/effects/target_hit_effect.dart';
 
 /// Returns the actual score awarded (combo/Fever/Golden-boosted) so the
 /// floating feedback text can show the real number.
-typedef TargetHitCallback = int Function(TargetComponent target, HitZone zone, bool isGolden);
+typedef TargetHitCallback =
+    int Function(TargetComponent target, HitZone zone, bool isGolden);
 typedef TargetExpiredCallback = void Function(TargetComponent target);
 
 /// The real, tappable dot. Rendering + tap-resolution only — scoring
@@ -57,16 +58,18 @@ class TargetComponent extends PositionComponent with TapCallbacks {
     scale = Vector2.zero();
     add(
       SequenceEffect([
-        ScaleEffect.to(Vector2.all(1.15), EffectController(duration: 0.15, curve: Curves.easeOut)),
-        ScaleEffect.to(Vector2.all(1.0), EffectController(duration: 0.1, curve: Curves.easeIn)),
+        ScaleEffect.to(
+          Vector2.all(1.15),
+          EffectController(duration: 0.15, curve: Curves.easeOut),
+        ),
+        ScaleEffect.to(
+          Vector2.all(1.0),
+          EffectController(duration: 0.1, curve: Curves.easeIn),
+        ),
       ]),
     );
     add(
-      TimerComponent(
-        period: lifetime,
-        removeOnFinish: true,
-        onTick: _expire,
-      ),
+      TimerComponent(period: lifetime, removeOnFinish: true, onTick: _expire),
     );
   }
 
@@ -122,7 +125,11 @@ class TargetComponent extends PositionComponent with TapCallbacks {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..color = AppColors.perfectRing.withValues(alpha: 0.55);
-    canvas.drawCircle(center, radius * GameConstants.perfectHitZoneFraction, perfectRingPaint);
+    canvas.drawCircle(
+      center,
+      radius * GameConstants.perfectHitZoneFraction,
+      perfectRingPaint,
+    );
   }
 
   @override
@@ -150,17 +157,27 @@ class TargetComponent extends PositionComponent with TapCallbacks {
     parent?.add(
       TargetHitEffect.burst(
         position: position.clone(),
-        color: isGolden ? AppColors.gold : (isPerfect ? AppColors.gold : AppColors.targetHighlight),
+        color: isGolden
+            ? AppColors.gold
+            : (isPerfect ? AppColors.gold : AppColors.targetHighlight),
         strong: strong,
       ),
     );
-    // Perfect/Golden get a second, wider sparkle layer for extra juice.
+    // Perfect/Golden get a second, wider sparkle layer plus an expanding
+    // ring so they read as clearly bigger moments than a normal hit.
     if (isPerfect || isGolden) {
       parent?.add(
         TargetHitEffect.burst(
           position: position.clone(),
           color: AppColors.gold,
           strong: true,
+        ),
+      );
+      parent?.add(
+        ExpandingRingEffect(
+          position: position.clone(),
+          color: AppColors.gold,
+          startRadius: radius,
         ),
       );
     }
@@ -177,8 +194,14 @@ class TargetComponent extends PositionComponent with TapCallbacks {
     // so OpacityEffect would throw at runtime — pop via scale instead.
     add(
       SequenceEffect([
-        ScaleEffect.to(Vector2.all(isPerfect || isGolden ? 1.45 : 1.3), EffectController(duration: 0.08)),
-        ScaleEffect.to(Vector2.zero(), EffectController(duration: 0.12, curve: Curves.easeIn)),
+        ScaleEffect.to(
+          Vector2.all(isPerfect || isGolden ? 1.45 : 1.3),
+          EffectController(duration: 0.08),
+        ),
+        ScaleEffect.to(
+          Vector2.zero(),
+          EffectController(duration: 0.12, curve: Curves.easeIn),
+        ),
       ], onComplete: removeFromParent),
     );
   }

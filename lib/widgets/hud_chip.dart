@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import 'package:tap_the_dot/constants/asset_constants.dart';
+import 'package:tap_the_dot/theme/app_colors.dart';
+import 'package:tap_the_dot/theme/app_text_styles.dart';
 
-/// Rounded HUD container shared by score/timer so the gameplay overlay
-/// reads as part of the game rather than bare text over the canvas.
+/// Rounded HUD container shared by score/timer/combo so the gameplay
+/// overlay reads as part of the game rather than bare text over the
+/// canvas. [iconAsset] adds a small themed icon (trophy/stopwatch/combo
+/// fire) ahead of the label.
 class HudChip extends StatelessWidget {
   const HudChip({
     super.key,
     required this.label,
     required this.value,
+    this.iconAsset,
     this.valueColor = AppColors.textDark,
     this.alignEnd = false,
     this.animateChanges = true,
@@ -17,6 +21,7 @@ class HudChip extends StatelessWidget {
 
   final String label;
   final String value;
+  final String? iconAsset;
   final Color valueColor;
   final bool alignEnd;
 
@@ -26,7 +31,10 @@ class HudChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final valueText = Text(value, style: AppTextStyles.score.copyWith(color: valueColor));
+    final valueText = Text(
+      value,
+      style: AppTextStyles.score.copyWith(color: valueColor),
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -34,20 +42,38 @@ class HudChip extends StatelessWidget {
         color: AppColors.background,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white, width: 2),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: alignEnd
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: AppTextStyles.hudLabel),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (iconAsset != null) ...[
+                Image.asset(
+                  AssetConstants.asset(iconAsset!),
+                  width: 12,
+                  height: 12,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Text(label, style: AppTextStyles.hudLabel),
+            ],
+          ),
           if (animateChanges)
             TweenAnimationBuilder<double>(
               key: ValueKey(value),
               tween: Tween(begin: 1.15, end: 1.0),
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
-              builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+              builder: (context, scale, child) =>
+                  Transform.scale(scale: scale, child: child),
               child: valueText,
             )
           else

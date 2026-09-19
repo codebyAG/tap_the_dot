@@ -1,28 +1,24 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
+import 'package:tap_the_dot/constants/asset_constants.dart';
+import 'package:tap_the_dot/theme/app_text_styles.dart';
 
-enum GameButtonVariant { primary, secondary }
-
-/// Chunky, 3D "game UI" button — a lighter top face sitting on a darker
-/// base, which shifts down to meet the base on press. Deliberately not a
-/// plain [ElevatedButton]; Material's flat ripple doesn't read as a
-/// casual-game CTA. Press state is a [ValueNotifier] driving
-/// [ValueListenableBuilder] rather than setState.
+/// Pill-shaped CTA backed by one of the asset pack's `buttons/button_*.png`
+/// sprites (2172x724 — a circular icon badge on the left third, blank
+/// space on the right for a label). Sized via [AspectRatio] to the
+/// sprite's exact ratio so it's never stretched.
 class GameButton extends StatefulWidget {
   const GameButton({
     super.key,
     required this.label,
+    required this.asset,
     required this.onPressed,
-    this.variant = GameButtonVariant.primary,
-    this.icon,
   });
 
+  /// One of AssetConstants.buttonPlay/buttonHome/buttonRestart/buttonShop.
+  final String asset;
   final String label;
   final VoidCallback onPressed;
-  final GameButtonVariant variant;
-  final IconData? icon;
 
   @override
   State<GameButton> createState() => _GameButtonState();
@@ -39,15 +35,6 @@ class _GameButtonState extends State<GameButton> {
 
   @override
   Widget build(BuildContext context) {
-    final isPrimary = widget.variant == GameButtonVariant.primary;
-    final topColor = isPrimary ? AppColors.primary : AppColors.background;
-    final baseColor = isPrimary ? AppColors.primaryDark : AppColors.backgroundAlt;
-    final textColor = isPrimary ? AppColors.textLight : AppColors.textDark;
-    final depth = isPrimary ? 6.0 : 4.0;
-    final radius = isPrimary ? 28.0 : 20.0;
-    final hPad = isPrimary ? 40.0 : 22.0;
-    final vPad = isPrimary ? 18.0 : 12.0;
-
     return GestureDetector(
       onTapDown: (_) => _pressed.value = true,
       onTapUp: (_) => _pressed.value = false,
@@ -56,50 +43,46 @@ class _GameButtonState extends State<GameButton> {
       child: ValueListenableBuilder<bool>(
         valueListenable: _pressed,
         builder: (context, isPressed, child) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: depth),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  top: depth,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(color: baseColor, borderRadius: BorderRadius.circular(radius)),
-                  ),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 80),
-                  curve: Curves.easeOut,
-                  margin: EdgeInsets.only(top: isPressed ? depth : 0),
-                  child: child,
-                ),
-              ],
-            ),
+          return AnimatedScale(
+            scale: isPressed ? 0.96 : 1.0,
+            duration: const Duration(milliseconds: 80),
+            child: child,
           );
         },
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color.lerp(topColor, Colors.white, 0.18)!, topColor],
-            ),
-            borderRadius: BorderRadius.circular(radius),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(widget.icon, color: textColor, size: isPrimary ? 22 : 18),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                widget.label,
-                style: isPrimary
-                    ? AppTextStyles.button
-                    : AppTextStyles.button.copyWith(fontSize: 14, color: textColor),
-              ),
-            ],
+        child: AspectRatio(
+          aspectRatio: 2172 / 724,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The icon badge occupies the left ~1/3 of the sprite — clear
+              // it plus a small gutter so the label never overlaps it.
+              final badgeWidth = constraints.maxWidth * (724 / 2172);
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    AssetConstants.asset(widget.asset),
+                    fit: BoxFit.fill,
+                  ),
+                  Padding(
+                    padding: EdgeInsetsDirectional.only(
+                      start: badgeWidth * 1.05,
+                      end: constraints.maxWidth * 0.06,
+                    ),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          widget.label,
+                          style: AppTextStyles.button.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

@@ -2,19 +2,20 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 
-import '../../../../core/constants/asset_constants.dart';
-import '../../../../core/constants/game_constants.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../domain/entities/combo.dart';
-import '../../domain/entities/target.dart';
-import '../controllers/game_controller.dart';
-import 'components/target_component.dart';
-import 'effects/combo_milestone_effect.dart';
-import 'effects/fever_effect.dart';
-import 'effects/target_hit_effect.dart';
-import 'effects/wrong_tap_effect.dart';
-import 'systems/difficulty_system.dart';
-import 'systems/spawn_system.dart';
+import 'package:tap_the_dot/constants/asset_constants.dart';
+import 'package:tap_the_dot/constants/game_constants.dart';
+import 'package:tap_the_dot/theme/app_colors.dart';
+import 'package:tap_the_dot/models/combo.dart';
+import 'package:tap_the_dot/models/skin_config.dart';
+import 'package:tap_the_dot/models/target.dart';
+import 'package:tap_the_dot/services/game_controller.dart';
+import 'package:tap_the_dot/game_engine/components/target_component.dart';
+import 'package:tap_the_dot/game_engine/effects/combo_milestone_effect.dart';
+import 'package:tap_the_dot/game_engine/effects/fever_effect.dart';
+import 'package:tap_the_dot/game_engine/effects/target_hit_effect.dart';
+import 'package:tap_the_dot/game_engine/effects/wrong_tap_effect.dart';
+import 'package:tap_the_dot/game_engine/systems/difficulty_system.dart';
+import 'package:tap_the_dot/game_engine/systems/spawn_system.dart';
 
 /// Owns the real-time gameplay world: spawning targets, their positions,
 /// animations and particles. Business state (score/timer/combo/Fever)
@@ -44,12 +45,14 @@ class TapDotGame extends FlameGame with TapCallbacks {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    images.prefix = AssetConstants.flameImagePrefix;
 
-    await images.loadAll([AssetConstants.dotClassic, AssetConstants.background]);
-    _dotSprite = Sprite(images.fromCache(AssetConstants.dotClassic));
+    final skinPath = SkinCatalog.byId(controller.selectedSkinId).asset;
+    await images.loadAll([skinPath, AssetConstants.backgroundGame]);
+    _dotSprite = Sprite(images.fromCache(skinPath));
 
     _background = SpriteComponent(
-      sprite: Sprite(images.fromCache(AssetConstants.background)),
+      sprite: Sprite(images.fromCache(AssetConstants.backgroundGame)),
       size: size,
       position: Vector2.zero(),
       priority: -10,
@@ -136,7 +139,13 @@ class TapDotGame extends FlameGame with TapCallbacks {
   void _showComboMilestone(int tier) {
     final center = Vector2(size.x / 2, size.y * 0.32);
     add(ComboMilestoneEffect(position: center, multiplier: tier));
-    add(TargetHitEffect.burst(position: center, color: AppColors.gold, strong: true));
+    add(
+      TargetHitEffect.burst(
+        position: center,
+        color: AppColors.gold,
+        strong: true,
+      ),
+    );
   }
 
   void _showFeverStart() {

@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../domain/entities/player_progress.dart';
+import 'package:tap_the_dot/models/player_progress.dart';
 
 /// JSON (de)serialization for [PlayerProgress]. Kept separate from the
 /// domain entity so the domain layer never depends on `dart:convert`
@@ -32,7 +32,9 @@ class PlayerProgressModel extends PlayerProgress {
     return PlayerProgressModel(
       bestScore: json['bestScore'] as int? ?? 0,
       coins: json['coins'] as int? ?? 0,
-      unlockedSkinIds: (json['unlockedSkinIds'] as List<dynamic>?)?.cast<String>() ?? const ['classic'],
+      unlockedSkinIds:
+          (json['unlockedSkinIds'] as List<dynamic>?)?.cast<String>() ??
+          const ['classic'],
       selectedSkinId: json['selectedSkinId'] as String? ?? 'classic',
       soundEnabled: json['soundEnabled'] as bool? ?? true,
       musicEnabled: json['musicEnabled'] as bool? ?? true,

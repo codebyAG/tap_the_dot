@@ -2,8 +2,8 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../../core/theme/app_colors.dart';
-import '../../../domain/entities/target.dart';
+import 'package:tap_the_dot/theme/app_colors.dart';
+import 'package:tap_the_dot/models/target.dart';
 
 /// "+12" / "PERFECT! +12" / "GOLDEN! +25" floating feedback above a hit
 /// target. [score] is the FINAL awarded amount (already boosted by combo
@@ -25,8 +25,16 @@ class FloatingScoreText extends TextComponent {
              fontWeight: FontWeight.w900,
              color: isGolden
                  ? AppColors.gold
-                 : (zone == HitZone.perfect ? AppColors.gold : AppColors.textLight),
-             shadows: const [Shadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 1))],
+                 : (zone == HitZone.perfect
+                       ? AppColors.gold
+                       : AppColors.textLight),
+             shadows: const [
+               Shadow(
+                 color: Colors.black38,
+                 blurRadius: 4,
+                 offset: Offset(0, 1),
+               ),
+             ],
            ),
          ),
        );
@@ -51,9 +59,15 @@ class FloatingScoreText extends TextComponent {
     );
     add(
       SequenceEffect([
-        ScaleEffect.to(Vector2.all(1.0), EffectController(duration: 0.12, curve: Curves.easeOut)),
+        ScaleEffect.to(
+          Vector2.all(1.0),
+          EffectController(duration: 0.12, curve: Curves.easeOut),
+        ),
         ScaleEffect.to(Vector2.all(1.0), EffectController(duration: 0.33)),
-        ScaleEffect.to(Vector2.zero(), EffectController(duration: 0.15, curve: Curves.easeIn)),
+        ScaleEffect.to(
+          Vector2.zero(),
+          EffectController(duration: 0.15, curve: Curves.easeIn),
+        ),
       ], onComplete: removeFromParent),
     );
   }

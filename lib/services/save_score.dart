@@ -1,5 +1,5 @@
-import '../entities/game_result.dart';
-import '../repositories/game_repository.dart';
+﻿import 'package:tap_the_dot/models/game_result.dart';
+import 'package:tap_the_dot/services/game_repository.dart';
 
 /// Persists the outcome of a run, updating the best score if beaten.
 /// totalHits/perfectHits/bestCombo are per-run display stats — they pass

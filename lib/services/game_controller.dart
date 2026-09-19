@@ -2,14 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../../../core/constants/game_constants.dart';
-import '../../../../core/services/audio/audio_service.dart';
-import '../../../../core/services/haptic/haptic_service.dart';
-import '../../domain/entities/combo.dart';
-import '../../domain/entities/game_result.dart';
-import '../../domain/entities/target.dart';
-import '../../domain/usecases/get_player_progress.dart';
-import '../../domain/usecases/save_score.dart';
+import 'package:tap_the_dot/constants/game_constants.dart';
+import 'package:tap_the_dot/models/skin_config.dart';
+import 'package:tap_the_dot/services/audio_service.dart';
+import 'package:tap_the_dot/services/haptic_service.dart';
+import 'package:tap_the_dot/models/combo.dart';
+import 'package:tap_the_dot/models/game_result.dart';
+import 'package:tap_the_dot/models/player_progress.dart';
+import 'package:tap_the_dot/models/target.dart';
+import 'package:tap_the_dot/services/get_player_progress.dart';
+import 'package:tap_the_dot/services/save_player_progress.dart';
+import 'package:tap_the_dot/services/save_score.dart';
 
 /// App-level gameplay state and rules. Owns the 30-second countdown,
 /// score, combo, Fever Mode and coins — Flame only owns real-time visuals
@@ -19,10 +22,12 @@ class GameController extends ChangeNotifier {
   GameController({
     required GetPlayerProgress getPlayerProgress,
     required SaveScore saveScore,
+    required SavePlayerProgress savePlayerProgress,
     required AudioService audioService,
     required HapticService hapticService,
   }) : _getPlayerProgress = getPlayerProgress,
        _saveScore = saveScore,
+       _savePlayerProgress = savePlayerProgress,
        _audioService = audioService,
        _hapticService = hapticService {
     _loadProgress();
@@ -30,6 +35,7 @@ class GameController extends ChangeNotifier {
 
   final GetPlayerProgress _getPlayerProgress;
   final SaveScore _saveScore;
+  final SavePlayerProgress _savePlayerProgress;
   final AudioService _audioService;
   final HapticService _hapticService;
 
@@ -47,8 +53,16 @@ class GameController extends ChangeNotifier {
   int totalCoins = 0;
   double timeRemaining = GameConstants.gameDurationSeconds.toDouble();
   bool isPlaying = false;
+  bool isPaused = false;
   bool isGameOver = false;
   GameResult? lastResult;
+
+  /// Skin + settings state, all persisted through [PlayerProgress].
+  List<String> unlockedSkinIds = const [SkinCatalog.defaultSkinId];
+  String selectedSkinId = SkinCatalog.defaultSkinId;
+  bool soundEnabled = true;
+  bool musicEnabled = true;
+  bool hapticsEnabled = true;
 
   Timer? _countdownTimer;
   int _lastComboMultiplier = 1;
@@ -57,6 +71,84 @@ class GameController extends ChangeNotifier {
     final progress = await _getPlayerProgress();
     bestScore = progress.bestScore;
     totalCoins = progress.coins;
+    unlockedSkinIds = progress.unlockedSkinIds;
+    selectedSkinId = progress.selectedSkinId;
+    soundEnabled = progress.soundEnabled;
+    musicEnabled = progress.musicEnabled;
+    hapticsEnabled = progress.hapticsEnabled;
+    _applySettingsToServices();
+    notifyListeners();
+  }
+
+  void _applySettingsToServices() {
+    _audioService.sfxEnabled = soundEnabled;
+    _audioService.musicEnabled = musicEnabled;
+    _hapticService.enabled = hapticsEnabled;
+  }
+
+  Future<void> _persistProgress() {
+    return _savePlayerProgress(
+      PlayerProgress(
+        bestScore: bestScore,
+        coins: totalCoins,
+        unlockedSkinIds: unlockedSkinIds,
+        selectedSkinId: selectedSkinId,
+        soundEnabled: soundEnabled,
+        musicEnabled: musicEnabled,
+        hapticsEnabled: hapticsEnabled,
+      ),
+    );
+  }
+
+  /// Selects an already-owned skin. Persists immediately and takes effect
+  /// next run (the in-run sprite is loaded once at [TapDotGame.onLoad]).
+  Future<void> selectSkin(String skinId) async {
+    if (!unlockedSkinIds.contains(skinId) || selectedSkinId == skinId) return;
+    selectedSkinId = skinId;
+    notifyListeners();
+    await _persistProgress();
+  }
+
+  /// Buys and equips a locked skin if the player has enough coins.
+  /// Returns true on success, false if already owned or unaffordable.
+  Future<bool> purchaseSkin(String skinId) async {
+    if (unlockedSkinIds.contains(skinId)) return false;
+    final skin = SkinCatalog.byId(skinId);
+    if (totalCoins < skin.price) return false;
+
+    totalCoins -= skin.price;
+    unlockedSkinIds = [...unlockedSkinIds, skinId];
+    selectedSkinId = skinId;
+    notifyListeners();
+    await _persistProgress();
+    return true;
+  }
+
+  /// Toggles sound/music/haptics, applies them to the services immediately,
+  /// and persists so they survive an app restart.
+  Future<void> updateSettings({bool? sound, bool? music, bool? haptics}) async {
+    if (sound != null) soundEnabled = sound;
+    if (music != null) musicEnabled = music;
+    if (haptics != null) hapticsEnabled = haptics;
+    _applySettingsToServices();
+    notifyListeners();
+    await _persistProgress();
+  }
+
+  /// Freezes the countdown without resetting run state — [TapDotGame]
+  /// separately pauses/resumes the Flame engine itself so targets stop
+  /// animating/spawning while paused.
+  void pauseGame() {
+    if (!isPlaying || isPaused) return;
+    isPaused = true;
+    _countdownTimer?.cancel();
+    notifyListeners();
+  }
+
+  void resumeGame() {
+    if (!isPlaying || !isPaused) return;
+    isPaused = false;
+    _runCountdown();
     notifyListeners();
   }
 
@@ -74,11 +166,21 @@ class GameController extends ChangeNotifier {
     _lastComboMultiplier = 1;
     timeRemaining = GameConstants.gameDurationSeconds.toDouble();
     isPlaying = true;
+    isPaused = false;
     isGameOver = false;
     lastResult = null;
 
+    _runCountdown();
+    notifyListeners();
+  }
+
+  void _runCountdown() {
+    _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      timeRemaining = (timeRemaining - 0.1).clamp(0, GameConstants.gameDurationSeconds.toDouble());
+      timeRemaining = (timeRemaining - 0.1).clamp(
+        0,
+        GameConstants.gameDurationSeconds.toDouble(),
+      );
 
       if (isFeverActive) {
         feverTimeRemaining -= 0.1;
@@ -93,8 +195,6 @@ class GameController extends ChangeNotifier {
         notifyListeners();
       }
     });
-
-    notifyListeners();
   }
 
   /// Called by [TapDotGame] when a real target is hit. Returns the actual
@@ -109,8 +209,12 @@ class GameController extends ChangeNotifier {
     if (combo > bestCombo) bestCombo = combo;
 
     comboMultiplier = ComboRules.multiplierFor(combo);
-    final feverMultiplier = isFeverActive ? GameConstants.feverScoreMultiplier : 1;
-    final baseScore = TargetScoring.pointsFor(zone) + (isGolden ? GameConstants.goldenDotBonusScore : 0);
+    final feverMultiplier = isFeverActive
+        ? GameConstants.feverScoreMultiplier
+        : 1;
+    final baseScore =
+        TargetScoring.pointsFor(zone) +
+        (isGolden ? GameConstants.goldenDotBonusScore : 0);
     final earned = baseScore * comboMultiplier * feverMultiplier;
     score += earned;
 
@@ -189,6 +293,7 @@ class GameController extends ChangeNotifier {
     if (!isPlaying) return;
     _countdownTimer?.cancel();
     isPlaying = false;
+    isPaused = false;
     isGameOver = true;
     isFeverActive = false;
     timeRemaining = 0;

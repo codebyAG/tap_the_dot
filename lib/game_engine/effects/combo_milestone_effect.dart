@@ -2,7 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../../core/theme/app_colors.dart';
+import 'package:tap_the_dot/theme/app_colors.dart';
 
 /// Big "COMBO x5!" celebration text shown once when the combo multiplier
 /// steps up to a new tier — see ComboRules. Purely visual; the actual
@@ -27,17 +27,29 @@ class ComboMilestoneEffect extends PositionComponent {
             fontSize: 30,
             fontWeight: FontWeight.w900,
             color: AppColors.gold,
-            shadows: [Shadow(color: Colors.black45, blurRadius: 6, offset: Offset(0, 2))],
+            shadows: [
+              Shadow(
+                color: Colors.black45,
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
         ),
       ),
     );
     add(
       SequenceEffect([
-        ScaleEffect.to(Vector2.all(1.2), EffectController(duration: 0.18, curve: Curves.easeOut)),
+        ScaleEffect.to(
+          Vector2.all(1.2),
+          EffectController(duration: 0.18, curve: Curves.easeOut),
+        ),
         ScaleEffect.to(Vector2.all(1.0), EffectController(duration: 0.1)),
         ScaleEffect.to(Vector2.all(1.0), EffectController(duration: 0.45)),
-        ScaleEffect.to(Vector2.zero(), EffectController(duration: 0.2, curve: Curves.easeIn)),
+        ScaleEffect.to(
+          Vector2.zero(),
+          EffectController(duration: 0.2, curve: Curves.easeIn),
+        ),
       ], onComplete: removeFromParent),
     );
   }

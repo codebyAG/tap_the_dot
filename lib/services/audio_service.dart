@@ -1,7 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../constants/asset_constants.dart';
+import 'package:tap_the_dot/constants/asset_constants.dart';
 
 enum SoundEffect {
   tap,
@@ -36,7 +36,10 @@ const Map<SoundEffect, String> _soundFiles = {
 /// gameplay must never crash because a sound file hasn't been added yet.
 class AudioService {
   AudioService({int poolSize = 4})
-    : _players = List.generate(poolSize, (_) => AudioPlayer()..setReleaseMode(ReleaseMode.stop));
+    : _players = List.generate(
+        poolSize,
+        (_) => AudioPlayer()..setReleaseMode(ReleaseMode.stop),
+      );
 
   final List<AudioPlayer> _players;
   int _nextPlayer = 0;

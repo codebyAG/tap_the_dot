@@ -1,4 +1,4 @@
-import '../../../../core/constants/game_constants.dart';
+﻿import 'package:tap_the_dot/constants/game_constants.dart';
 
 /// Pure combo-tier rules — score multiplier for a given consecutive-hit
 /// count. No Flutter/Flame dependency so it's trivial to unit test and

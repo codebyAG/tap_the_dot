@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 
-/// The classic dot, gently floating and pulsing on the Home screen so it
-/// reads as a game character rather than a static icon. Driven by an
-/// [AnimationController] + [AnimatedBuilder] — no setState calls.
+import 'package:tap_the_dot/constants/asset_constants.dart';
+
+/// The player's selected dot skin, gently floating and pulsing on the Home
+/// screen so it reads as a game character rather than a static icon.
+/// Driven by an [AnimationController] + [AnimatedBuilder] — no setState
+/// calls.
 class FloatingMascot extends StatefulWidget {
-  const FloatingMascot({super.key});
+  const FloatingMascot({super.key, this.asset = AssetConstants.dotClassic});
+
+  /// Path relative to `assets/` (see AssetConstants) — defaults to the
+  /// classic skin, but Home passes whichever skin is currently equipped.
+  final String asset;
 
   @override
   State<FloatingMascot> createState() => _FloatingMascotState();
 }
 
-class _FloatingMascotState extends State<FloatingMascot> with SingleTickerProviderStateMixin {
+class _FloatingMascotState extends State<FloatingMascot>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 2),
@@ -33,7 +41,11 @@ class _FloatingMascotState extends State<FloatingMascot> with SingleTickerProvid
           child: Transform.scale(scale: 1.0 + 0.05 * t, child: child),
         );
       },
-      child: Image.asset('assets/images/dot_classic.png', width: 150, height: 150),
+      child: Image.asset(
+        AssetConstants.asset(widget.asset),
+        width: 150,
+        height: 150,
+      ),
     );
   }
 }

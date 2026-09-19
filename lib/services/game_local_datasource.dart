@@ -1,6 +1,6 @@
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/services/storage/storage_service.dart';
-import '../models/player_progress_model.dart';
+﻿import 'package:tap_the_dot/constants/app_constants.dart';
+import 'package:tap_the_dot/services/storage_service.dart';
+import 'package:tap_the_dot/models/player_progress_model.dart';
 
 class GameLocalDataSource {
   GameLocalDataSource(this._storage);
